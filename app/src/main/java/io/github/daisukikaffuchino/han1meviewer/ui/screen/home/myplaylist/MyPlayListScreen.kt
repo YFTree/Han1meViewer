@@ -1,7 +1,5 @@
 package io.github.daisukikaffuchino.han1meviewer.ui.screen.home.myplaylist
 
-import android.view.View
-import android.widget.EditText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +38,6 @@ import io.github.daisukikaffuchino.han1meviewer.ui.component.PullRefreshOverlay
 import io.github.daisukikaffuchino.han1meviewer.ui.component.appbar.HanimeScaffold
 import io.github.daisukikaffuchino.han1meviewer.ui.component.content.EmptyContent
 import io.github.daisukikaffuchino.han1meviewer.ui.viewmodel.MyPlayListViewModelV2
-import io.github.daisukikaffuchino.han1meviewer.util.showAlertDialog
 import com.yenaly.yenaly_libs.utils.showShortToast
 
 /**
@@ -70,6 +67,7 @@ fun PlaylistScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var temporarilyHideSheetForNavigation by rememberSaveable { mutableStateOf(false) }
+    var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshCompleted.collect { isRefreshing = false }
@@ -130,25 +128,7 @@ fun PlaylistScreen(
         onBack = navigateBack,
         scrollBehavior = scrollBehavior,
         actions = {
-            FilledIconButton(onClick = {
-                context.showAlertDialog {
-                    setTitle(R.string.create_new_playlist)
-                    val etView =
-                        View.inflate(context, R.layout.dialog_playlist_modify_edit_text, null)
-                    val etTitle = etView.findViewById<EditText>(R.id.et_title)
-                    val etDesc = etView.findViewById<EditText>(R.id.et_desc)
-                    setView(etView)
-                    setPositiveButton(R.string.confirm) { _, _ ->
-                        handleEvent(
-                            PlaylistEvent.OnCreatePlaylist(
-                                etTitle.text.toString(),
-                                etDesc.text.toString()
-                            )
-                        )
-                    }
-                    setNegativeButton(R.string.cancel, null)
-                }
-            }) {
+            FilledIconButton(onClick = { showCreatePlaylistDialog = true }) {
                 Icon(
                     Icons.Default.Add,
                     contentDescription = stringResource(R.string.create_new_playlist)
@@ -156,6 +136,16 @@ fun PlaylistScreen(
             }
         },
     ) { innerPadding ->
+        if (showCreatePlaylistDialog) {
+            PlaylistEditDialog(
+                title = stringResource(R.string.create_new_playlist),
+                onConfirm = { title, description ->
+                    handleEvent(PlaylistEvent.OnCreatePlaylist(title, description))
+                },
+                onDismiss = { showCreatePlaylistDialog = false },
+            )
+        }
+
         Box(
             modifier = Modifier
                 .padding(innerPadding)

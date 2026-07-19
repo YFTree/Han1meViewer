@@ -225,7 +225,7 @@ fun MainNavHost(
                 navController = navController,
                 fallbackDestination = HomeSettingsRoute,
             ) {
-                DownloadSettingsRouteScreen(activity = activity)
+                DownloadSettingsRouteScreen()
             }
         }
         composable<MpvPlayerSettingsRoute> {

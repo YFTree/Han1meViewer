@@ -5,13 +5,17 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -105,6 +109,7 @@ fun HomeSettingsRouteScreen(
     var showLicenseScreen by remember { mutableStateOf(false) }
     var showRestartConfirmDialog by remember { mutableStateOf(false) }
     var showLauncherPicker by remember { mutableStateOf(false) }
+    var showApplyDeepLinksDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -286,7 +291,7 @@ fun HomeSettingsRouteScreen(
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 showShortToast(R.string.action_app_open_by_default_settings_not_support)
             } else {
-                showApplyDeepLinksDialog(context, activity)
+                showApplyDeepLinksDialog = true
             }
         },
         onOpenFakeLauncherIcon = { showLauncherPicker = true },
@@ -363,6 +368,44 @@ fun HomeSettingsRouteScreen(
     if (showLicenseScreen) {
         LicenseDialog(
             onDismiss = { showLicenseScreen = false }
+        )
+    }
+
+    if (showApplyDeepLinksDialog) {
+        AlertDialog(
+            onDismissRequest = { showApplyDeepLinksDialog = false },
+            title = { Text(stringResource(R.string.apply_deep_links)) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(stringResource(R.string.apply_deep_links_summary))
+                    Text(stringResource(R.string.apply_deep_links_tips))
+                    Image(
+                        painter = painterResource(R.drawable.apply_deep_links),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showApplyDeepLinksDialog = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            openApplyDeepLinksSettings(context, activity)
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.go_to_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApplyDeepLinksDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
     }
 

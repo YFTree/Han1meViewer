@@ -72,9 +72,7 @@ android {
         }
     }
     buildFeatures {
-        dataBinding = true
         buildConfig = true
-        viewBinding = true
         compose = true
     }
     compileOptions {

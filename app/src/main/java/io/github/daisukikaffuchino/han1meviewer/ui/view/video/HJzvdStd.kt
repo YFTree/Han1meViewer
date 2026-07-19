@@ -5,6 +5,7 @@ import android.content.res.ColorStateList
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
@@ -29,6 +30,23 @@ import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.IntRange
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.getSystemService
 import androidx.core.graphics.toColorInt
@@ -42,6 +60,12 @@ import androidx.navigation.findNavController
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.findViewTreeSavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import cn.jzvd.JZDataSource
 import cn.jzvd.JZMediaInterface
 import cn.jzvd.JZUtils
@@ -54,10 +78,8 @@ import io.github.daisukikaffuchino.han1meviewer.R
 import io.github.daisukikaffuchino.han1meviewer.logic.entity.HKeyframeEntity
 import io.github.daisukikaffuchino.han1meviewer.ui.activity.MainActivity
 import io.github.daisukikaffuchino.han1meviewer.ui.adapter.HKeyframeRvAdapter
-import io.github.daisukikaffuchino.han1meviewer.ui.adapter.SuperResolutionAdapter
-import io.github.daisukikaffuchino.han1meviewer.ui.adapter.VideoSpeedAdapter
 import io.github.daisukikaffuchino.han1meviewer.ui.navigation.main.HomeRoute
-import io.github.daisukikaffuchino.han1meviewer.util.setStateViewLayout
+import io.github.daisukikaffuchino.han1meviewer.ui.theme.HanimeTheme
 import io.github.daisukikaffuchino.han1meviewer.util.showAlertDialog
 import com.yenaly.yenaly_libs.utils.OrientationManager
 import com.yenaly.yenaly_libs.utils.appScreenWidth
@@ -721,26 +743,86 @@ class HJzvdStd @JvmOverloads constructor(
 
         }
     }
-    @SuppressLint("InflateParams")
     fun clickSuperResolution() {
         onCLickUiToggleToClear()
-        val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
-        val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
-        val popup = PopupWindow(
-            inflater, JZUtils.dip2px(jzvdContext, 240f),
-            LayoutParams.MATCH_PARENT, true
-        ).apply {
-            contentView = inflater
-            animationStyle = cn.jzvd.R.style.pop_animation
+        showComposeSidePopup { dismiss ->
+            VideoOptionPopupContent(
+                options = getSuperResolutionArray().toList(),
+                selectedIndex = superResolutionIndex,
+                onSelected = { position ->
+                    superResolutionIndex = position
+                    dismiss()
+                },
+            )
         }
-        rv.layoutManager = LinearLayoutManager(context)
-        rv.adapter = SuperResolutionAdapter(superResolutionIndex,getSuperResolutionArray().toList()).apply {
-            setOnItemClickListener { _, _, position ->
-                superResolutionIndex = position
-                popup.dismiss()
-            }
+    }
+
+    private fun showComposeSidePopup(content: @Composable (dismiss: () -> Unit) -> Unit) {
+        var popup: PopupWindow? = null
+        val activity = context.findActivityOrNull<FragmentActivity>()
+        val lifecycleOwner = findViewTreeLifecycleOwner() ?: activity ?: return
+        val viewModelStoreOwner = findViewTreeViewModelStoreOwner() ?: activity
+        val savedStateRegistryOwner = findViewTreeSavedStateRegistryOwner() ?: activity
+        val composeView = ComposeView(context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeViewModelStoreOwner(viewModelStoreOwner)
+            setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
+        }
+        popup = PopupWindow(
+            composeView,
+            JZUtils.dip2px(jzvdContext, 240f),
+            LayoutParams.MATCH_PARENT,
+            true,
+        ).apply {
+            contentView = composeView
+            animationStyle = cn.jzvd.R.style.pop_animation
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            isOutsideTouchable = true
         }
         popup.showAtLocation(textureViewContainer, Gravity.END, 0, 0)
+        composeView.rootView.apply {
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeViewModelStoreOwner(viewModelStoreOwner)
+            setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
+        }
+        composeView.setContent {
+            HanimeTheme {
+                content { popup?.dismiss() }
+            }
+        }
+    }
+
+    @Composable
+    private fun VideoOptionPopupContent(
+        options: List<String>,
+        selectedIndex: Int,
+        onSelected: (Int) -> Unit,
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .width(240.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
+                .padding(horizontal = 4.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            itemsIndexed(options) { index, label ->
+                Text(
+                    text = label,
+                    color = if (index == selectedIndex) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelected(index) }
+                        .padding(vertical = 14.dp),
+                )
+            }
+        }
     }
 
     override fun onLongClick(v: View): Boolean {
@@ -752,7 +834,6 @@ class HJzvdStd @JvmOverloads constructor(
             else -> false
         }
     }
-
     override fun onCompletion() {
         if (screen == SCREEN_FULLSCREEN) {
             onStateAutoComplete()
@@ -1181,49 +1262,64 @@ class HJzvdStd @JvmOverloads constructor(
     }
 
     // #issue-14: 之前用 XPopup 三键模式下会有 bug，无法呼出，所以换成这个
-    @SuppressLint("InflateParams")
     fun clickSpeed() {
         onCLickUiToggleToClear()
-        val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
-        val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
-        val popup = PopupWindow(
-            inflater, JZUtils.dip2px(jzvdContext, 240f),
-            LayoutParams.MATCH_PARENT, true
-        ).apply {
-            contentView = inflater
-            animationStyle = cn.jzvd.R.style.pop_animation
+        showComposeSidePopup { dismiss ->
+            VideoOptionPopupContent(
+                options = speedStringArray.toList(),
+                selectedIndex = currentSpeedIndex,
+                onSelected = { position ->
+                    currentSpeedIndex = position
+                    dismiss()
+                },
+            )
         }
-        rv.layoutManager = LinearLayoutManager(context)
-        rv.adapter = VideoSpeedAdapter(currentSpeedIndex).apply {
-            setOnItemClickListener { _, _, position ->
-                currentSpeedIndex = position
-                popup.dismiss()
-            }
-        }
-        popup.showAtLocation(textureViewContainer, Gravity.END, 0, 0)
     }
 
-    @SuppressLint("InflateParams")
     fun clickHKeyframe(v: View) {
         onCLickUiToggleToClear()
-        val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
-        val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
+        val (contentView, rv) = createSidePanelRecyclerView(v.context)
         val popup = PopupWindow(
-            inflater, JZUtils.dip2px(jzvdContext, 240f),
+            contentView, JZUtils.dip2px(jzvdContext, 240f),
             LayoutParams.MATCH_PARENT, true
         ).apply {
-            contentView = inflater
+            this.contentView = contentView
             animationStyle = cn.jzvd.R.style.pop_animation
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            isOutsideTouchable = true
         }
         rv.layoutManager = LinearLayoutManager(v.context)
         val adapter = hKeyframeAdapter
         rv.adapter = adapter
-        adapter.setStateViewLayout(
-            inflate(v.context, R.layout.layout_empty_view, null),
-            this@HJzvdStd.context.getString(R.string.here_is_empty) + "\n"
-                    + this@HJzvdStd.context.getString(R.string.long_press_to_add_h_keyframe)
-        )
+        adapter.stateView = TextView(v.context).apply {
+            text = this@HJzvdStd.context.getString(R.string.here_is_empty) + "\n" +
+                    this@HJzvdStd.context.getString(R.string.long_press_to_add_h_keyframe)
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            layoutParams = FrameLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+            )
+        }
         popup.showAtLocation(textureViewContainer, Gravity.END, 0, 0)
+    }
+
+    private fun createSidePanelRecyclerView(context: Context): Pair<FrameLayout, RecyclerView> {
+        val paddingHorizontal = JZUtils.dip2px(context, 4f)
+        val paddingVertical = JZUtils.dip2px(context, 16f)
+        val rv = RecyclerView(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER,
+            )
+        }
+        val wrapper = FrameLayout(context).apply {
+            setBackgroundResource(R.drawable.frosted_glass)
+            setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
+            addView(rv)
+        }
+        return wrapper to rv
     }
 
     /**

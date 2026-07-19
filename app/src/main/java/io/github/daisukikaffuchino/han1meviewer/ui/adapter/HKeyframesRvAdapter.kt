@@ -1,10 +1,30 @@
 package io.github.daisukikaffuchino.han1meviewer.ui.adapter
 
 import android.content.Context
-import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.recyclerview.widget.DiffUtil
+import androidx.savedstate.findViewTreeSavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import cn.jzvd.JZUtils
 import com.chad.library.adapter4.BaseQuickAdapter
 import com.chad.library.adapter4.viewholder.QuickViewHolder
@@ -12,7 +32,11 @@ import com.google.android.material.button.MaterialButton
 import io.github.daisukikaffuchino.han1meviewer.R
 import io.github.daisukikaffuchino.han1meviewer.logic.entity.HKeyframeEntity
 import io.github.daisukikaffuchino.han1meviewer.ui.activity.MainActivity
+import io.github.daisukikaffuchino.han1meviewer.ui.theme.HanimeTheme
+import io.github.daisukikaffuchino.han1meviewer.util.createAlertDialog
 import io.github.daisukikaffuchino.han1meviewer.util.showAlertDialog
+import io.github.daisukikaffuchino.han1meviewer.util.showWithBlurEffect
+import com.yenaly.yenaly_libs.utils.findActivityOrNull
 import com.yenaly.yenaly_libs.utils.showShortToast
 
 /**
@@ -85,19 +109,21 @@ class HKeyframeRvAdapter(
                 setOnClickListener {
                     val position = viewHolder.bindingAdapterPosition
                     val item = getItem(position)
+                    val promptState = mutableStateOf(item.prompt.orEmpty())
+                    val positionState = mutableStateOf(item.position.toString())
+                    val activity = context.findActivityOrNull<FragmentActivity>()
+                    val lifecycleOwner = activity ?: return@setOnClickListener
+                    val dialogContent = ComposeView(context).apply {
+                        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+                    }
 
-                    val view = View.inflate(context, R.layout.dialog_modify_h_keyframe, null)
-                    val etPrompt = view.findViewById<TextView>(R.id.et_prompt)
-                    val etPosition = view.findViewById<TextView>(R.id.et_position)
-                    etPrompt.text = item.prompt
-                    etPosition.text = item.position.toString()
-
-                    context.showAlertDialog {
+                    val dialog = context.createAlertDialog {
                         setTitle(R.string.modify_h_keyframe)
-                        setView(view)
+                        setView(dialogContent)
                         setPositiveButton(R.string.confirm) { _, _ ->
-                            val prompt = etPrompt.text.toString()
-                            val pos = etPosition.text.toString().toLong()
+                            val prompt = promptState.value
+                            val pos = positionState.value.toLongOrNull()
+                                ?: return@setPositiveButton showShortToast(R.string.unknown_error)
                             when (context) {
                                 is MainActivity -> {
                                     context.viewModel.modifyHKeyframe(
@@ -111,6 +137,32 @@ class HKeyframeRvAdapter(
                             }
                         }
                         setNegativeButton(R.string.cancel, null)
+                    }
+                    dialog.showWithBlurEffect()
+
+                    val contentLifecycleOwner =
+                        dialogContent.findViewTreeLifecycleOwner() ?: lifecycleOwner
+                    val viewModelStoreOwner =
+                        dialogContent.findViewTreeViewModelStoreOwner() ?: activity
+                    val savedStateRegistryOwner =
+                        dialogContent.findViewTreeSavedStateRegistryOwner() ?: activity
+                    dialog.window?.decorView?.apply {
+                        setViewTreeLifecycleOwner(contentLifecycleOwner)
+                        setViewTreeViewModelStoreOwner(viewModelStoreOwner)
+                        setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
+                    }
+                    dialogContent.apply {
+                        setViewTreeLifecycleOwner(contentLifecycleOwner)
+                        setViewTreeViewModelStoreOwner(viewModelStoreOwner)
+                        setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
+                        setContent {
+                            HanimeTheme {
+                                HKeyframeEditContent(
+                                    promptState = promptState,
+                                    positionState = positionState,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -134,5 +186,29 @@ class HKeyframeRvAdapter(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HKeyframeEditContent(
+    promptState: MutableState<String>,
+    positionState: MutableState<String>,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = promptState.value,
+            onValueChange = { promptState.value = it },
+            label = { Text(stringResource(R.string.prompt)) },
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 3,
+        )
+        OutlinedTextField(
+            value = positionState.value,
+            onValueChange = { positionState.value = it },
+            label = { Text(stringResource(R.string.position_ms)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
     }
 }
