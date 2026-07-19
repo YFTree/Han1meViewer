@@ -361,7 +361,6 @@ Room 主要用于：
 - `UrlLoggingInterceptor`
 - `HCookieJar`
 - `HDns`
-- `GitHubDns`
 - `HProxySelector`
 
 异常类型：

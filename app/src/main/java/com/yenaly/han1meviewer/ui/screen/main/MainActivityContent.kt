@@ -22,28 +22,19 @@ import androidx.navigation.compose.rememberNavController
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
-import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
-import com.yenaly.han1meviewer.ui.component.UpdateDialog
 import com.yenaly.han1meviewer.ui.component.UsageNoticeDialog
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
 import com.yenaly.han1meviewer.ui.navigation.main.MainNavHost
 import com.yenaly.han1meviewer.ui.navigation.main.handleMainIntent
 import com.yenaly.han1meviewer.ui.navigation.main.navigateDrawerDestination
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
-import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageViewModel
-import com.yenaly.han1meviewer.util.getUpdateIfExists
-import com.yenaly.han1meviewer.util.installApkPackage
-import com.yenaly.han1meviewer.util.requestPostNotificationPermission
-import com.yenaly.han1meviewer.worker.HUpdateWorker
 import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalTime::class)
 @Composable
 fun MainActivityContent(
     activity: MainActivity,
@@ -61,7 +52,6 @@ fun MainActivityContent(
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         var currentMainDestination by remember { mutableStateOf(MainDestinationSpec.Home) }
-        var pendingUpdate by remember { mutableStateOf<Latest?>(null) }
         var showUsageNotice by remember { mutableStateOf(!Preferences.usageNoticeAccepted) }
         val isDrawerOpen =
             drawerState.currentValue == DrawerValue.Open || drawerState.targetValue == DrawerValue.Open
@@ -87,12 +77,6 @@ fun MainActivityContent(
         LaunchedEffect(Unit) {
             pendingNavigationRequests.collect { intent ->
                 composeNavController.handleMainIntent(intent)
-            }
-        }
-        LaunchedEffect(Unit) {
-            AppViewModel.pendingUpdateDialog.collect { latest ->
-                Preferences.lastUpdatePopupTime = kotlin.time.Clock.System.now().epochSeconds
-                pendingUpdate = latest
             }
         }
         LaunchedEffect(viewModel) {
@@ -160,27 +144,6 @@ fun MainActivityContent(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.55f)),
-                    )
-                }
-
-                pendingUpdate?.let { latest ->
-                    UpdateDialog(
-                        latest = latest,
-                        onDismiss = { pendingUpdate = null },
-                        onConfirm = {
-                            pendingUpdate = null
-                            scope.launch {
-                                val file = activity.getUpdateIfExists(latest)
-                                if (file != null) {
-                                    activity.installApkPackage(file)
-                                } else {
-                                    if (activity.requestPostNotificationPermission()) {
-                                        HUpdateWorker.enqueue(activity.applicationContext, latest)
-                                        showShortToast(R.string.update_download_background)
-                                    }
-                                }
-                            }
-                        },
                     )
                 }
                 UsageNoticeDialog(

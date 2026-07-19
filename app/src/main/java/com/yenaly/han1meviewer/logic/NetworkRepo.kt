@@ -16,7 +16,6 @@ import com.yenaly.han1meviewer.logic.model.MyListType
 import com.yenaly.han1meviewer.logic.model.OnlineWatchHistorySort
 import com.yenaly.han1meviewer.logic.model.VideoCommentArgs
 import com.yenaly.han1meviewer.logic.model.VideoComments
-import com.yenaly.han1meviewer.logic.network.HUpdater
 import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
@@ -517,20 +516,6 @@ object NetworkRepo {
     //</editor-fold>
 
     //<editor-fold desc="Base">
-
-    fun getLatestVersion(forceCheck: Boolean = true) = flow {
-        emit(WebsiteState.Loading)
-        val versionInfo = HUpdater.checkForUpdate(forceCheck)
-        emit(WebsiteState.Success(versionInfo))
-    }.catch { e ->
-        when (e) {
-            is CancellationException -> throw e
-            else -> {
-                e.printStackTrace()
-                emit(WebsiteState.Error(e))
-            }
-        }
-    }.flowOn(Dispatchers.IO)
 
     fun login(email: String, password: String) = flow {
         emit(WebsiteState.Loading)

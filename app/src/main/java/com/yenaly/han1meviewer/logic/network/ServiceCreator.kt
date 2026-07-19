@@ -1,8 +1,5 @@
 package com.yenaly.han1meviewer.logic.network
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.yenaly.han1meviewer.HA1_GITHUB_API_URL
-import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.network.interceptor.CloudflareInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.GetchuInterceptor
@@ -13,7 +10,6 @@ import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.unsafeLazy
 import okhttp3.Cache
 import okhttp3.CookieJar
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import retrofit2.Retrofit
@@ -44,13 +40,6 @@ object ServiceCreator {
         .build()
         .create(T::class.java)
 
-    inline fun <reified T> createGitHubApi(): T = Retrofit.Builder()
-        .baseUrl(HA1_GITHUB_API_URL)
-        .client(githubClient)
-        .addConverterFactory(HJson.asConverterFactory("application/json".toMediaType()))
-        .build()
-        .create(T::class.java)
-
     inline fun <reified T> createGetchu(baseUrl: String): T = Retrofit.Builder()
         .baseUrl(baseUrl)
         .client(getchuClient)
@@ -61,9 +50,6 @@ object ServiceCreator {
      * OkHttpClient
      */
     var hClient: OkHttpClient = buildHClient()
-        private set
-
-    var githubClient: OkHttpClient = buildGithubClient()
         private set
 
     var downloadClient: OkHttpClient = buildDownloadClient()
@@ -117,12 +103,4 @@ object ServiceCreator {
             .build()
     }
 
-    private fun buildGithubClient(): OkHttpClient {
-        return OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .dns(GitHubDns)
-            .addInterceptor(UserAgentInterceptor)
-            .addInterceptor(UrlLoggingInterceptor())
-            .build()
-    }
 }

@@ -3,21 +3,12 @@ package com.yenaly.han1meviewer.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
-import com.yenaly.han1meviewer.Preferences
-import com.yenaly.han1meviewer.logic.NetworkRepo
-import com.yenaly.han1meviewer.logic.model.github.Latest
-import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.worker.HUpdateWorker
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
 import com.yenaly.han1meviewer.worker.HanimeDownloadWorker
 import com.yenaly.yenaly_libs.base.YenalyViewModel
 import com.yenaly.yenaly_libs.utils.application
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -32,12 +23,6 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
      */
     override var csrfToken: String? = null
 
-    private val _versionFlow = MutableStateFlow<WebsiteState<Latest?>>(WebsiteState.Loading)
-    val versionFlow = _versionFlow.asStateFlow()
-
-    private val _pendingUpdateDialog = MutableSharedFlow<Latest>(extraBufferCapacity = 1)
-    val pendingUpdateDialog = _pendingUpdateDialog.asSharedFlow()
-
     val runningWorkInfoCountFlow = MutableStateFlow(0)
 
     init {
@@ -49,39 +34,10 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
             HanimeDownloadManagerV2.init()
         }
 
-        viewModelScope.launch(Dispatchers.Main) {
-            HUpdateWorker.collectOutput(application)
-        }
-
         viewModelScope.launch(Dispatchers.IO) {
             HanimeDownloadWorker.getRunningWorkInfoCount(application).collect { count ->
                 Log.d(HanimeDownloadWorker.TAG, "getRunningWorkInfoCount: $count")
                 runningWorkInfoCountFlow.value = count
-            }
-        }
-    }
-
-    fun showUpdateDialogIfAvailable() {
-        val state = _versionFlow.value
-        if (state is WebsiteState.Success) {
-            state.info?.let { latest ->
-                viewModelScope.launch { _pendingUpdateDialog.emit(latest) }
-            }
-        }
-    }
-
-    fun getLatestVersion(forceCheck: Boolean = true, delayMillis: Long = 0, forceShow: Boolean = false) {
-        viewModelScope.launch {
-            delay(delayMillis)
-            getLatestVersionSuspend(forceCheck, forceShow)
-        }
-    }
-
-    private suspend fun getLatestVersionSuspend(forceCheck: Boolean = true, forceShow: Boolean = false) {
-        NetworkRepo.getLatestVersion(forceCheck).collect {
-            _versionFlow.value = it
-            if (it is WebsiteState.Success && (forceShow || Preferences.isUpdateDialogVisible)) {
-                it.info?.let { info -> _pendingUpdateDialog.emit(info) }
             }
         }
     }

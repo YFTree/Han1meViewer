@@ -17,8 +17,6 @@ import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.getSpValue
 import com.yenaly.yenaly_libs.utils.putSpValue
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.time.Duration.Companion.days
-import kotlin.time.ExperimentalTime
 
 object Preferences {
     private const val USAGE_NOTICE_ACCEPTED = "usage_notice_accepted"
@@ -73,29 +71,6 @@ object Preferences {
     val cloudFlareCookieStateFlow = MutableStateFlow(cloudFlareCookie)
 
     // 更新 相關
-
-    private const val UPDATE_NODE_ID = "update_node_id"
-
-    var updateNodeId: String
-        get() = getSpValue(UPDATE_NODE_ID, EMPTY_STRING)
-        set(value) = putSpValue(UPDATE_NODE_ID, value)
-
-    var lastUpdatePopupTime
-        get() = getSpValue(SettingsPreferenceKeys.LAST_UPDATE_POPUP_TIME, 0L)
-        set(value) = putSpValue(SettingsPreferenceKeys.LAST_UPDATE_POPUP_TIME, value)
-
-    val updatePopupIntervalDays
-        get() = preferenceSp.getInt(SettingsPreferenceKeys.UPDATE_POPUP_INTERVAL_DAYS, 0)
-
-    // Check if show update dialog.
-    @OptIn(ExperimentalTime::class)
-    val isUpdateDialogVisible: Boolean
-        get() {
-            val now = kotlin.time.Clock.System.now()
-            val lastCheckTime = kotlin.time.Instant.fromEpochSeconds(lastUpdatePopupTime)
-            val interval = updatePopupIntervalDays
-            return now > lastCheckTime + interval.days
-        }
 
     // 設定 相關
 

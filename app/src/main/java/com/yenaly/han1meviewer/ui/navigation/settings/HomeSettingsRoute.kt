@@ -35,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.BuildConfig
 import com.yenaly.han1meviewer.HanimeConstants
 import com.yenaly.han1meviewer.HA1_GITHUB_FORUM_URL
@@ -44,7 +43,6 @@ import com.yenaly.han1meviewer.HanimeApplication
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.BackupManager
-import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.screen.settings.HomeSettingsScreen
@@ -55,11 +53,9 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.hiddenHomeCategoryKeys
 import com.yenaly.han1meviewer.ui.screen.home.homepage.homeCategoryOrder
 import com.yenaly.han1meviewer.ui.screen.home.homepage.saveHomeCategoryPreferences
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
-import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.ThemeUtils
 import com.yenaly.han1meviewer.util.showToast
 import com.yenaly.yenaly_libs.ActivityManager
-import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.browse
 import com.yenaly.yenaly_libs.utils.folderSize
 import com.yenaly.yenaly_libs.utils.showShortToast
@@ -71,7 +67,6 @@ private const val HOME_VIDEO_LANGUAGE = "video_language"
 private const val HOME_DEFAULT_VIDEO_QUALITY = "default_video_quality"
 private const val HOME_SHOW_PLAYED_INDICATOR = "show_played_indicator"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
-private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
 private const val HOME_FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
 private const val HOME_USE_DARK_MODE = "use_dark_mode"
 private const val HOME_ALLOW_RESUME_PLAYBACK = "allow_resume_playback"
@@ -104,7 +99,6 @@ fun HomeSettingsRouteScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val versionState by AppViewModel.versionFlow.collectAsStateWithLifecycle()
     var refreshKey by remember { mutableIntStateOf(0) }
     var cacheKey by remember { mutableIntStateOf(0) }
     var showClearCacheConfirm by remember { mutableStateOf(false) }
@@ -166,29 +160,10 @@ fun HomeSettingsRouteScreen(
             generateClearCacheSummary(context, context.cacheDir?.folderSize ?: 0L).toString()
         }
     }
-    val checkUpdateFailed = stringResource(R.string.check_update_failed)
-    val checkingUpdate = stringResource(R.string.checking_update)
-    val alreadyLatestUpdate = stringResource(R.string.already_latest_update)
-
-    val updateSummary = remember(versionState, context) {
-        when (versionState) {
-            is WebsiteState.Error -> checkUpdateFailed
-            is WebsiteState.Loading -> checkingUpdate
-            is WebsiteState.Success -> {
-                val info = (versionState as WebsiteState.Success).info
-                if (info == null) {
-                    alreadyLatestUpdate
-                } else {
-                    applicationContext.getString(R.string.check_update_success, info.version)
-                }
-            }
-        }
-    }
-    val uiState = remember(refreshKey, updateSummary, cacheSummary, launcherItems, context) {
+    val uiState = remember(refreshKey, cacheSummary, launcherItems, context) {
         buildHomeSettingsUiState(
             context = context,
             launcherItems = launcherItems,
-            updateSummary = updateSummary,
             cacheSummary = cacheSummary,
         )
     }
@@ -306,18 +281,6 @@ fun HomeSettingsRouteScreen(
                 refreshKey++
                 activity.recreate()
             }
-        },
-        onCheckUpdate = {
-            val currentVersion = versionState
-            if (currentVersion is WebsiteState.Success && currentVersion.info != null) {
-                AppViewModel.showUpdateDialogIfAvailable()
-            } else {
-                AppViewModel.getLatestVersion(forceShow = true)
-            }
-        },
-        onUpdatePopupIntervalDaysChange = {
-            Preferences.preferenceSp.edit { putInt(HOME_UPDATE_POPUP_INTERVAL_DAYS, it) }
-            refreshKey++
         },
         onOpenApplyDeepLinks = {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
@@ -477,7 +440,6 @@ private data class LauncherItem(
 private fun buildHomeSettingsUiState(
     context: Context,
     launcherItems: List<LauncherItem>,
-    updateSummary: String,
     cacheSummary: String,
 ): HomeSettingsUiState {
     val currentAlias = Preferences.fakeLauncherIcon
@@ -525,17 +487,11 @@ private fun buildHomeSettingsUiState(
         useDynamicColor = Preferences.useDynamicColor,
         useLockScreen = Preferences.preferenceSp.getBoolean(HOME_USE_LOCK_SCREEN, false),
         fakeLauncherIconName = currentItem.name,
-        updateSummary = updateSummary,
         cacheSummary = cacheSummary,
         versionSummary = context.getString(
             R.string.current_version,
             "v${BuildConfig.VERSION_NAME}"
         ),
-        updatePopupIntervalSummary = toIntervalDaysPrettyString(
-            context,
-            Preferences.updatePopupIntervalDays
-        ),
-        updatePopupIntervalDays = Preferences.updatePopupIntervalDays,
         dynamicColorEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
         themeColorKey = Preferences.themeColor ?: ThemeColorPreset.DEFAULT.key,
         themeColorName = context.getString(ThemeColorPreset.fromKey(Preferences.themeColor).displayNameRes),

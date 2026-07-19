@@ -32,12 +32,6 @@ import com.yenaly.yenaly_libs.utils.formatBytesPerSecond
 import com.yenaly.yenaly_libs.utils.formatFileSizeV2
 import com.yenaly.yenaly_libs.utils.showLongToast
 import com.yenaly.yenaly_libs.utils.showShortToast
-import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.ExperimentalTime
 
 internal fun saveBoolean(key: String, value: Boolean) {
     Preferences.preferenceSp.edit { putBoolean(key, value) }
@@ -127,25 +121,6 @@ internal fun importDownloadedFiles(
 
 internal fun generateClearCacheSummary(context: Context, size: Long): CharSequence {
     return context.getString(R.string.cache_usage_summary, size.formatFileSizeV2()).parseAsHtml()
-}
-
-@OptIn(ExperimentalTime::class)
-internal fun toIntervalDaysPrettyString(context: Context, value: Int): String {
-    val lastUpdatePopupTime = Preferences.lastUpdatePopupTime
-    val msg = if (lastUpdatePopupTime == 0L) {
-        context.getString(R.string.no_update_popup_yet)
-    } else {
-        context.getString(
-            R.string.last_update_popup_check_time,
-            Instant.fromEpochSeconds(lastUpdatePopupTime)
-                .toLocalDateTime(TimeZone.currentSystemDefault())
-                .format(LocalDateTime.Formats.ISO),
-        )
-    }
-    return when (value) {
-        0 -> context.getString(R.string.at_any_time)
-        else -> context.getString(R.string.which_days, value)
-    } + "\n" + msg
 }
 
 internal fun toPrettySensitivityString(

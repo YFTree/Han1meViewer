@@ -24,7 +24,6 @@ import com.yenaly.han1meviewer.SearchGridColumnsConfig
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
 import com.yenaly.han1meviewer.ui.component.SettingInfoItem
 import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
-import com.yenaly.han1meviewer.ui.component.SettingSliderItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
@@ -67,8 +66,6 @@ fun HomeSettingsScreen(
     onOpenDownloadSettings: () -> Unit,
     onOpenNetworkSettings: () -> Unit,
     onOpenAppLanguageSettings: (String) -> Unit,
-    onCheckUpdate: () -> Unit,
-    onUpdatePopupIntervalDaysChange: (Int) -> Unit,
     onOpenApplyDeepLinks: () -> Unit,
     onOpenFakeLauncherIcon: () -> Unit,
     onOpenOpenSourceLicense: () -> Unit,
@@ -396,26 +393,6 @@ fun HomeSettingsScreen(
             )
         }
 
-        item { SettingsGroupTitle(stringResource(R.string.update)) }
-        item {
-            SettingNavigationItem(
-                title = stringResource(R.string.check_update),
-                summary = state.updateSummary,
-                iconRes = R.drawable.ic_baseline_update_24,
-                onClick = onCheckUpdate,
-            )
-        }
-        item {
-            SettingSliderItem(
-                title = stringResource(R.string.update_popup_interval_days),
-                summary = state.updatePopupIntervalSummary,
-                value = state.updatePopupIntervalDays,
-                valueRange = 0..30,
-                iconRes = R.drawable.ic_clock,
-                onValueChange = onUpdatePopupIntervalDaysChange,
-            )
-        }
-
         item { SettingsGroupTitle(stringResource(R.string.privacy)) }
         item {
             SettingSwitchItem(
@@ -532,11 +509,8 @@ private fun HomeSettingsScreenPreview() {
                 useDynamicColor = true,
                 useLockScreen = false,
                 fakeLauncherIconName = "Han1meViewer",
-                updateSummary = "已經是最新版本！",
                 cacheSummary = "目前佔用了 12MB 的儲存空間",
                 versionSummary = "當前版本：v1.0.0",
-                updatePopupIntervalSummary = "7天\n最近還沒跳出過更新視窗哦",
-                updatePopupIntervalDays = 7,
                 dynamicColorEnabled = true,
                 themeColorKey = "default",
                 themeColorName = "預設（暖紅）",
@@ -571,8 +545,6 @@ private fun HomeSettingsScreenPreview() {
             onOpenDownloadSettings = {},
             onOpenNetworkSettings = {},
             onOpenAppLanguageSettings = {},
-            onCheckUpdate = {},
-            onUpdatePopupIntervalDaysChange = {},
             onOpenApplyDeepLinks = {},
             onOpenFakeLauncherIcon = {},
             onOpenOpenSourceLicense = {},

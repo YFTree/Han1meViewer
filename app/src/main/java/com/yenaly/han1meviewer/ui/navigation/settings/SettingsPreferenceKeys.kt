@@ -4,7 +4,6 @@ object SettingsPreferenceKeys {
     const val VIDEO_LANGUAGE = "video_language"
     const val DEFAULT_VIDEO_QUALITY = "default_video_quality"
     const val SHOW_PLAYED_INDICATOR = "show_played_indicator"
-    const val UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
     const val FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
     const val USE_DARK_MODE = "use_dark_mode"
     const val USE_DYNAMIC_COLOR = "use_dynamic_color"
@@ -63,5 +62,4 @@ object SettingsPreferenceKeys {
     const val MPV_TLS_VERIFY = "mpv_tls_verify"
     const val MPV_NETWORK_TIMEOUT = "mpv_network_timeout"
     const val CUSTOM_PARAMS = "mpv_custom_parameters"
-    const val LAST_UPDATE_POPUP_TIME = "last_update_popup_time"
 }
